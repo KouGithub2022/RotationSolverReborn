@@ -1,4 +1,6 @@
-﻿namespace RotationSolver.Basic.Rotations;
+﻿using ECommons.Logging;
+
+namespace RotationSolver.Basic.Rotations;
 
 public partial class CustomRotation
 {
@@ -10,6 +12,10 @@ public partial class CustomRotation
     
     private static DateTime _nextTimeToHeal = DateTime.MinValue;
     private static readonly Random _random = new();
+
+    private static readonly TimeSpan _gcdExceptionLogInterval = TimeSpan.FromSeconds(30);
+    private static string _lastGCDExceptionKey = string.Empty;
+    private static DateTime _lastGCDExceptionLog = DateTime.MinValue;
 
     private IAction? GCD()
     {
@@ -481,8 +487,7 @@ public partial class CustomRotation
         }
         catch (Exception ex)
         {
-            // Log the exception or handle it as needed
-            Console.WriteLine($"Exception in GCD method: {ex.Message}");
+            LogGCDException(ex);
         }
         finally
         {
@@ -492,6 +497,22 @@ public partial class CustomRotation
         }
 
         return null;
+    }
+
+    private static void LogGCDException(Exception ex)
+    {
+        string key = $"{ex.GetType().FullName}|{ex.Message}|{ex.StackTrace}";
+        DateTime now = DateTime.Now;
+
+        if (key == _lastGCDExceptionKey && now - _lastGCDExceptionLog < _gcdExceptionLogInterval)
+        {
+            return;
+        }
+
+        _lastGCDExceptionKey = key;
+        _lastGCDExceptionLog = now;
+
+        PluginLog.Error($"Exception in GCD method: {ex}");
     }
 
     private bool RaiseSpell(out IAction? act, bool mustUse)
